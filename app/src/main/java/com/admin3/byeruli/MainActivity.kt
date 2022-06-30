@@ -3,6 +3,7 @@ package com.admin3.byeruli
 import android.os.Bundle
 import android.util.Log
 import android.webkit.CookieManager
+import android.webkit.ValueCallback
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.widget.Toast
@@ -85,6 +86,18 @@ class MainActivity : ComponentActivity() {
 
                   override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
+                    val urlS = url ?: ""
+                    if (urlS.startsWith("https://user.ruliweb.com/member/login")) {
+                      view?.evaluateJavascript(
+                        """
+                          document.getElementById("login_submit").addEventListener("click", function () {
+                             document.getElementById("login_form").submit();
+                          });
+                        """.trimIndent(),
+                      ) { _ ->
+                        // ??
+                      }
+                    }
                     if ((url ?: "") == "https://m.ruliweb.com/") {
                       val cookieStr = CookieManager.getInstance().getCookie(url)
                       val cookie = cookieStr.split("; ").map {
