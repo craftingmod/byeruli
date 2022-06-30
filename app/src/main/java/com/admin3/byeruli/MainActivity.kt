@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
                 onCreated = {
                   it.settings.apply {
                     javaScriptEnabled = true
+                    userAgentString = "Mozilla/5.0 (Linux; Android 10; SM-G960U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.70 Mobile Safari/537.36"
                   }
                 },
                 client = object : AccompanistWebViewClient() {

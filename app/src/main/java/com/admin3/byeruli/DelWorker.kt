@@ -11,6 +11,8 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.admin3.byeruli.data.Article
+import com.admin3.byeruli.data.Comment
 import com.admin3.byeruli.data.GunDatabase
 import kotlinx.coroutines.*
 import kotlin.math.round
@@ -104,22 +106,28 @@ class DelWorker(context: Context, parameters: WorkerParameters) : CoroutineWorke
       }
       // 3. fetch articles/comments
       if (isArticle) {
-        val articles = (1..pageInfo.first).map { page ->
+        val articles:List<Article> = (1..pageInfo.first).map { page ->
           Log.d("DelWorker", "page $page/${pageInfo.first}")
           if (isStopped) {
             // canceled work
             database.articleDao().clear()
             return@withContext false
           }
-          val pageArticles = GunRequest.getOwnerArticles(sToken, page)
-          if (!pageArticles.first) {
-            return@withContext false
+          for (i in 0 until 5) {
+            try {
+              val pageArticles = GunRequest.getOwnerArticles(sToken, page)
+              if (!pageArticles.first) {
+                continue
+              }
+              launch {
+                notify(ProgressState.COLLECT_ARTICLE_ID, (page - 1) * 30 + pageArticles.second.size, pageInfo.second)
+              }
+              return@map pageArticles.second
+            } catch (e:Exception) {
+              e.printStackTrace()
+            }
           }
-          launch {
-            notify(ProgressState.COLLECT_ARTICLE_ID, (page - 1) * 30 + pageArticles.second.size, pageInfo.second)
-          }
-          delay(200)
-          pageArticles.second
+          return@withContext false
         }.flatten().asReversed()
 
         database.articleDao().insertAll(*articles.toTypedArray())
@@ -134,10 +142,15 @@ class DelWorker(context: Context, parameters: WorkerParameters) : CoroutineWorke
             database.articleDao().clear()
             return@withContext false
           }
-          val deleteResult = GunRequest.deleteOwnerArticle(sToken, article.boardId, article.articleId)
-          // val deleteResult = Pair(true, "DEBUG")
-          delay(50L)
-          if (!deleteResult.first) {
+          var deleteResult = false
+          try {
+            deleteResult = GunRequest.deleteOwnerArticle(sToken, article.boardId, article.articleId).first
+            // deleteResult = true
+            delay(50L)
+          } catch (e:Exception) {
+            e.printStackTrace()
+          }
+          if (!deleteResult) {
             // FAIL
             database.articleDao().delete(article)
             database.articleDao().insertAll(article)
@@ -152,22 +165,28 @@ class DelWorker(context: Context, parameters: WorkerParameters) : CoroutineWorke
         }
         true
       } else {
-        val comments = (1..pageInfo.first).map { page ->
+        val comments:List<Comment> = (1..pageInfo.first).map { page ->
           Log.d("DelWorker", "page $page/${pageInfo.first}")
           if (isStopped) {
             // canceled work
             database.commentDao().clear()
             return@withContext false
           }
-          val pageComments = GunRequest.getOwnerComments(sToken, page)
-          if (!pageComments.first) {
-            return@withContext false
+          for (i in 0 until 5) {
+            try {
+              val pageComments = GunRequest.getOwnerComments(sToken, page)
+              if (!pageComments.first) {
+                continue
+              }
+              launch {
+                notify(ProgressState.COLLECT_COMMENT_ID, (page - 1) * 30 + pageComments.second.size, pageInfo.second)
+              }
+              return@map pageComments.second
+            } catch (e:Exception) {
+              e.printStackTrace()
+            }
           }
-          launch {
-            notify(ProgressState.COLLECT_COMMENT_ID, (page - 1) * 30 + pageComments.second.size, pageInfo.second)
-          }
-          delay(200)
-          pageComments.second
+          return@withContext false
         }.flatten().asReversed()
 
         database.commentDao().insertAll(*comments.toTypedArray())
@@ -181,10 +200,16 @@ class DelWorker(context: Context, parameters: WorkerParameters) : CoroutineWorke
             database.commentDao().clear()
             return@withContext false
           }
-          val deleteResult = GunRequest.deleteOwnerComment(sToken, comment.boardId, comment.articleId, comment.commentId)
-          // val deleteResult = Pair(true, "DEBUG")
-          delay(50L)
-          if (!deleteResult.first) {
+          var deleteResult = false
+          try {
+            deleteResult = GunRequest.deleteOwnerComment(sToken, comment.boardId, comment.articleId, comment.commentId).first
+            // deleteResult = true
+            delay(50L)
+          } catch (e:Exception) {
+            e.printStackTrace()
+          }
+
+          if (!deleteResult) {
             // FAIL
             database.commentDao().delete(comment)
             database.commentDao().insertAll(comment)
