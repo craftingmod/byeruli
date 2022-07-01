@@ -25,6 +25,7 @@ object GunRequest {
   suspend fun getOwnerArticles(sToken:String, page:Int = 1):Pair<Boolean, List<Article>> {
     val url = "https://bbs.ruliweb.com/member/mypage/myarticle"
     return Fuel.get(url, listOf("page" to page)).apply {
+      timeout(5000)
       header(Headers.COOKIE, "s_token=$sToken")
     }.awaitStringResult().fold(
       success = { html ->
@@ -128,6 +129,7 @@ object GunRequest {
   suspend fun deleteOwnerArticle(sToken:String, boardId:Int, articleId:Int):Pair<Boolean, String> {
     val url = "https://api.ruliweb.com/procDeleteMyArticle"
     return Fuel.post(url, listOf("board_id" to boardId, "article_id" to articleId)).apply {
+      timeout(5000)
       header(Headers.COOKIE to "s_token=$sToken")
       header("Referer" to "https://bbs.ruliweb.com/member/mypage/myarticle")
     }.awaitObjectResult<DelResp>(kotlinxDeserializerOf(json = JsonParser)).fold(
@@ -144,6 +146,7 @@ object GunRequest {
   suspend fun getOwnerComments(sToken: String, page:Int = 1):Pair<Boolean, List<Comment>> {
     val url = "https://bbs.ruliweb.com/member/mypage/mycomment"
     return Fuel.get(url, listOf("page" to page)).apply {
+      timeout(5000)
       header(Headers.COOKIE, "s_token=$sToken")
     }.awaitStringResult().fold(
       success = { html ->
@@ -205,6 +208,7 @@ object GunRequest {
       "article_id" to articleId,
       "comment_id" to commentId)
     ).apply {
+      timeout(5000)
       header(Headers.COOKIE to "s_token=$sToken")
       header("Referer" to "https://bbs.ruliweb.com/member/mypage/mycomment")
     }.awaitObjectResult<DelResp>(kotlinxDeserializerOf(json = JsonParser)).fold(
@@ -231,8 +235,9 @@ object GunRequest {
       val res = requestGetter(sToken, page)
       if (!res.first) {
         retries += 1
-        if (retries >= 3) {
-          throw Exception("failed to get last page. Retries exceeded.")
+        if (retries >= 10) {
+          progress(-1)
+          return Pair(-1, -1)
         }
         continue
       }

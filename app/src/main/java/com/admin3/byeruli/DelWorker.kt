@@ -52,7 +52,7 @@ class DelWorker(context: Context, parameters: WorkerParameters) : CoroutineWorke
         setSmallIcon(R.drawable.ic_delete_time)
         setStyle(NotificationCompat.BigPictureStyle().bigPicture(largeIcon))
         setContentTitle("삭제 실패")
-        setContentText("관리-03가 탄핵당했습니다.\n관리-03이 나중에 다시 고로시를 시도할 것 같습니다.")
+        setContentText("오류로 인해 관리-03이 삭제를 할 수가 없습니다.\n관리-03이 나중에 다시 고로시를 시도할 것 같습니다.")
       }.build().also {
         notificationManager.notify(NOTI_ID - 1, it)
       }
@@ -86,7 +86,10 @@ class DelWorker(context: Context, parameters: WorkerParameters) : CoroutineWorke
       // 1. get end page
       val progressFn = { progress:Int ->
         Log.d("DelWorker", "$tag last page finder: $progress")
-        if (isStopped) {
+        if (progress < 0) {
+          // Not Responding ERROR
+          false
+        } else if (isStopped) {
           false
         } else {
           launch {
@@ -103,6 +106,9 @@ class DelWorker(context: Context, parameters: WorkerParameters) : CoroutineWorke
         GunRequest.getLastOwnerArticlesPage(sToken, progressFn)
       } else {
         GunRequest.getLastOwnerCommentsPage(sToken, progressFn)
+      }
+      if (pageInfo.first == -1) {
+        return@withContext false
       }
       // 3. fetch articles/comments
       if (isArticle) {
